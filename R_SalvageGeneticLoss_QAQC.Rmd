@@ -161,7 +161,7 @@ paired_genetic_data_final<-paired_genetic_data %>% select(-Date,-Month,-MonthDay
   rename(Loss_GeneticData=Loss_KevinReece,Loss_SalvageData=Loss,LAD_GeneticData=LAD_KevinReece)
 
 #Print out csv
-write.csv(paired_genetic_data,file=file.path("output/Paired_Genetic_Data_Loss_Comparison_2023-01-17.csv"),row.names = F)
+write.csv(paired_genetic_data_final,file=file.path("output/Paired_Genetic_Data_Loss_Comparison_2023-01-17.csv"),row.names = F)
 
 ```
 
