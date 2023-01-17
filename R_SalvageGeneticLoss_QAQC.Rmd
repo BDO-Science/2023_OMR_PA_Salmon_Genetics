@@ -139,7 +139,7 @@ paired_genetic_data <- combined_data %>% filter(!is.na(ArchiveID)) %>%
 ```
 
 Even if I did not count differences in loss calculations due to rounding errors (difference less than 0.05), there were 
-`r round(count(paired_genetic_data %>% filter(abs(QAQC_Loss_Difference)<0.05))/count(paired_genetic_data)*100,digits=4)` % of the data where loss numbers did not match. Summing all the differences in these data rows, in total, there was a loss discrepancy of `r sum(paired_genetic_data$QAQC_Loss_Difference)` between the two datasets.
+`r round(count(paired_genetic_data %>% filter(abs(QAQC_Loss_Difference)>=0.05))/count(paired_genetic_data)*100,digits=4)` % of the data where loss numbers did not match. Summing all the differences in these data rows, in total, there was a loss discrepancy of `r sum(paired_genetic_data$QAQC_Loss_Difference)` between the two datasets.
 
 ```{r loss diff}
 
@@ -157,11 +157,33 @@ Given the discrepancy in loss calculations between the two datasets, here I crea
 ```{r final output}
 
 #Remove certain columns and rename some to make the dataset easier to understand and use
-paired_genetic_data_final<-paired_genetic_data %>% select(-Date,-Month,-MonthDay,-Time,-Count,-duplicateID) %>%
+paired_genetic_data_final<-paired_genetic_data %>% select(-Date,-Month,-MonthDay,-Time,-Count) %>%
   rename(Loss_GeneticData=Loss_KevinReece,Loss_SalvageData=Loss,LAD_GeneticData=LAD_KevinReece)
 
 #Print out csv
 write.csv(paired_genetic_data_final,file=file.path("output/Paired_Genetic_Data_Loss_Comparison_2023-01-17.csv"),row.names = F)
+
+```
+
+For the purpose of calculating loss of genetic winter-run relative to JPE each year, I've also summed up the loss for each year and compared them to the JPE. This file is titled: **"JPE_Genetic_Loss_Comparison_2023-01-17.csv"**
+
+```{r jpe comparison}
+
+# Read JPE file
+jpe_data <- read.csv(file = file.path("data_input/Winter-run_JPE.csv")) %>% rename(WaterYear=WY)
+
+annual_salvage<-salvage_data_adjusted %>% group_by(WaterYear) %>% filter(Race=="W") %>% summarise(WinterRun_LAD_Loss=sum(Loss))
+
+annual_salvage_genetic<-paired_genetic_data_final %>% group_by(WaterYear) %>% summarise(WinterRun_Genetic_Loss=sum(Loss_SalvageData),WinterRun_Genetic_Loss_according_to_geneticdatasheet=sum(Loss_GeneticData))
+annual_salvage_genetic[is.na(annual_salvage_genetic)] <- 0
+
+combined_jpe_data<-full_join(annual_salvage,annual_salvage_genetic) %>% left_join(jpe_data) %>% filter(WaterYear>=1996) %>%
+  mutate_all(~replace(., is.na(.), 0)) %>% mutate(JuvenileProductionEstimate=as.numeric(JuvenileProductionEstimate)) %>%
+  mutate(PercentJPE_genetic=WinterRun_Genetic_Loss/JuvenileProductionEstimate*100,PercentJPE_LAD=WinterRun_LAD_Loss/JuvenileProductionEstimate*100)
+
+#Print out csv
+write.csv(combined_jpe_data,file=file.path("output/JPE_Genetic_Loss_Comparison_2023-01-17.csv"),row.names = F)
+
 
 ```
 
