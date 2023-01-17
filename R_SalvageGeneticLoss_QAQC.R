@@ -93,9 +93,6 @@ count(paired_genetic_data %>% filter(abs(QAQC_Loss_Difference)<0.05))/count(pair
 #Total difference in loss calculation
 sum(paired_genetic_data$QAQC_Loss_Difference)
 #Print out csv
-write.csv(paired_genetic_data,file=file.path("output/Paired_Genetic_Data_Loss_Comparison_2023-01-13.csv"),row.names = F)
+#write.csv(paired_genetic_data,file=file.path("output/Paired_Genetic_Data_Loss_Comparison_2023-01-13.csv"),row.names = F)
 
-paired_genetic_data_final<-paired_genetic_data %>% -select
-
-test<- salvage_data_adjusted %>% filter(SampleDate == "2007-03-06")
-test2<- genetic_data_expanded %>% filter(SampleDate == "2007-03-06")
+#See RMD file for final analysis
