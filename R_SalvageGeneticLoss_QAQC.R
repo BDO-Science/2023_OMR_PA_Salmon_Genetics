@@ -40,15 +40,15 @@ salvage_data_adjusted<- setDT(expandRows(salvage_data_adjusted, "LengthFrequency
 
 salvage_data_adjusted<- salvage_data_adjusted%>%
   # build grouping by combination of variables
-  dplyr::group_by(SampleDateTime, Race, FL) %>%
+  dplyr::group_by(SampleDateTime, Race, FL, Facility) %>%
   # add row number which works per group due to prior grouping
   dplyr::mutate(duplicateID = dplyr::row_number()) %>%
   # ungroup to prevent unexpected behaviour down stream
   dplyr::ungroup() 
 
-#### Read Kevin Reece's Jan 11, 2023 data
+#### Read Kevin Reece's Jan 13, 2023 data
 
-genetic_data <-read_excel(file.path("data_input/WY1996-2022 Genetically Confirmed WR_CVP and SWP salvage and loss for OMR analysis_20230111_Final.xlsx"), sheet = "WY1996-2022 JUVWR Genetic_ID", range = cell_cols("A:K")) %>% 
+genetic_data <-read_excel(file.path("data_input/WY1996-2022 Genetically Confirmed WR_CVP and SWP salvage and loss for OMR analysis_20230113Final.xlsx"), sheet = "WY1996-2022 JUVWR Genetic_ID", range = cell_cols("A:K")) %>% 
   rename(SampleDate='Sample Date',SampleTime='Sample Time',FL=Forklength,Facility=Loc,Salvage_KevinReece=Salvage,Loss_KevinReece=Loss,LAD_KevinReece='Model Race',GeneticAssignment=Assignment) %>%
   mutate(SampleTime=format(SampleTime, "%H:%M:%S")) %>% mutate(SampleDate=as.Date(SampleDate)) %>%
   mutate(SampleDateTime=as.POSIXct(paste(SampleDate, SampleTime), format="%Y-%m-%d %H:%M:%S", tz="America/Los_Angeles")) %>% select(-Catch)
@@ -68,14 +68,14 @@ genetic_data_expanded<- genetic_data %>%
 ##################### Combine the salvage and genetic data sets
 combined_data<-left_join(salvage_data_adjusted,genetic_data_expanded)
 
-# About 0.7% of the data are not matched up to the salvage database
+# All data are matched up to the salvage database
 unpaired_genetic_data<-full_join(salvage_data_adjusted,genetic_data_expanded) %>% filter(is.na(Salvage))
 count(unpaired_genetic_data)/count(genetic_data)
 #Remove NA columns
-unpaired_genetic_data <- unpaired_genetic_data %>% select_if(~ !any(is.na(.)))
+#unpaired_genetic_data <- unpaired_genetic_data %>% select_if(~ !any(is.na(.)))
 
 #Print out csv
-write.csv(unpaired_genetic_data,file=file.path("output/Unpaired_Genetic_data_2023-01-13_fromJanuaryKevinReeceData.csv"),row.names = F)
+#write.csv(unpaired_genetic_data,file=file.path("output/Unpaired_Genetic_data_2023-01-13_fromJanuaryKevinReeceData.csv"),row.names = F)
 
 
 ###Double check that numbers are correct for matched data
@@ -95,4 +95,7 @@ sum(paired_genetic_data$QAQC_Loss_Difference)
 #Print out csv
 write.csv(paired_genetic_data,file=file.path("output/Paired_Genetic_Data_Loss_Comparison_2023-01-13.csv"),row.names = F)
 
-paired_genetic_data<-paired_genetic_data %>% rename9
+paired_genetic_data_final<-paired_genetic_data %>% -select
+
+test<- salvage_data_adjusted %>% filter(SampleDate == "2007-03-06")
+test2<- genetic_data_expanded %>% filter(SampleDate == "2007-03-06")

@@ -1,0 +1,167 @@
+---
+title: "Salvage Genetic Loss Data QA/QC"
+author: "Brian Mahardja"
+date: "2023-01-17"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(rvest)
+library(lubridate)
+library(splitstackshape)
+library(data.table)
+library(readxl)
+```
+
+## Salvage Data
+
+A copy of salvage database query data was sent by Vanessa Gusman (CDFW) in December 2022. The file is titled **"ChinookLoss_20221215.csv"**. This file is compared to the genetic data and the loss numbers contained within. When there are discrepancies in loss numbers between the two datasheets (salvage and genetic), the loss numbers from the salvage database should be considered the "correct" one. The salvage dataset is also used to ensure that every fish listed in the genetic datasheet does exist in the salvage database and therefore can be calculated for loss properly.
+
+
+```{r salvage data load}
+# Load salvage database sent by Vanessa Gusman
+
+salvage_data <- read.csv(file = file.path("data_input/ChinookLoss_20221215.csv"))
+salvage_data$SampleDateTime<-as.POSIXct(paste(salvage_data$Date, salvage_data$Time), format="%m/%d/%Y %H:%M:%S", tz="America/Los_Angeles")
+
+#Keep data with non-existent date and time
+salvage_data_wrong_time <- salvage_data %>% filter(is.na(SampleDateTime))
+
+#Change date to the proper format
+salvage_data$SampleDate<-as.Date(salvage_data$Date, format = "%m/%d/%Y")
+#Change time to the proper format
+salvage_data<-salvage_data %>% mutate(SampleTime=as.POSIXct(paste("2022-10-01", Time), format="%Y-%m-%d %H:%M:%S", tz="America/Los_Angeles")) %>%
+  mutate(SampleTime=format(SampleTime, "%H:%M:%S"))
+
+```
+
+### Assign unique ID to every fish and minor issues with dataset
+
+The CDFW salvage database would combine data from multiple fish that were of the same length and captured within the same site, date, and time. This would make comparison with the genetic data problematic because the genetic dataset contains a single row/line for every individual fish. The code below assigns a "duplicate ID" to ensure that a single fish in the genetic dataset isn't counted twice and vice versa. Consequently, loss and expanded salvage numbers were divided by the number of actual fish observed at salvage to get individual fish loss and salvage numbers.
+
+```{r salvage unique ID}
+
+# Prep salvage data
+
+#Rename columns to make it easier to work in R and divide Loss + Expanded Salvage by nfish
+salvage_data_adjusted<- salvage_data %>% 
+  dplyr::mutate(Facility =case_when(Facility==1 ~ "SWP",
+                                    Facility==2 ~ "CVP")) %>%
+  
+  #Remove erroneous sample date and time, ignore for now
+  #filter(!is.na(SampleDateTime)) %>%
+  #Remove single sample with NA count 
+  filter(!is.na(Count)) %>%
+  #Remove adclip fish
+  filter(AdClip == FALSE) %>%
+  #Ensure that data for salvage and loss are for a single fish
+  mutate(Salvage=Salvage/Count, Encounter=Encounter/LengthFrequency, Entrain=Entrain/LengthFrequency, Release=Release/LengthFrequency, Loss=Loss/LengthFrequency)
+
+#Multiply rows by nfish
+salvage_data_adjusted<- setDT(expandRows(salvage_data_adjusted, "LengthFrequency")) 
+
+salvage_data_adjusted<- salvage_data_adjusted%>%
+  # build grouping by combination of variables
+  dplyr::group_by(SampleDateTime, Race, FL, Facility) %>%
+  # add row number which works per group due to prior grouping
+  dplyr::mutate(duplicateID = dplyr::row_number()) %>%
+  # ungroup to prevent unexpected behaviour down stream
+  dplyr::ungroup() 
+
+
+```
+
+One notable finding through this QA/QC process is that the CDFW salvage database contains date and time that technically do not exist. The list below are date and time in which daylight savings time starts in spring and 2:00 AM for these dates should not exist because time should have been moved forward to 3:00 AM. For the purpose of this effort, we're keeping these dates and time because the errors were propagated into the genetic datasheet.
+
+```{r salvage error, echo=FALSE}
+salvage_data_wrong_time %>% select(Date,Time) %>% unique()
+```
+
+## Genetic Data
+
+The latest clean version of the genetic datasheet for all genetic winter-run was sent by Kevin Reece on January 13, 2023. This version is sent after one final QA/QC process was done on January 12 and a new version was created on January 13. The file is titled **"WY1996-2022 Genetically Confirmed WR_CVP and SWP salvage and loss for OMR analysis_20230113Final.xlsx"**. Unique "duplicate ID" was assigned to fish in order to ensure that multiple fish of the same length collected at the same location, date, and time are treated separately.
+
+```{r genetic data load}
+
+### Read Kevin Reece's Jan 13, 2023 genetic data
+
+genetic_data <-read_excel(file.path("data_input/WY1996-2022 Genetically Confirmed WR_CVP and SWP salvage and loss for OMR analysis_20230113Final.xlsx"), sheet = "WY1996-2022 JUVWR Genetic_ID", range = cell_cols("A:K")) %>% 
+  rename(SampleDate='Sample Date',SampleTime='Sample Time',FL=Forklength,Facility=Loc,Salvage_KevinReece=Salvage,Loss_KevinReece=Loss,LAD_KevinReece='Model Race',GeneticAssignment=Assignment) %>%
+  mutate(SampleTime=format(SampleTime, "%H:%M:%S")) %>% mutate(SampleDate=as.Date(SampleDate)) %>%
+  mutate(SampleDateTime=as.POSIXct(paste(SampleDate, SampleTime), format="%Y-%m-%d %H:%M:%S", tz="America/Los_Angeles")) %>% select(-Catch)
+
+
+genetic_data_expanded<- genetic_data %>%
+  #adjust time zone
+  mutate(SampleDateTime=force_tz(SampleDateTime, tz="America/Los_Angeles")) %>%
+  mutate(WaterYear=as.numeric(WaterYear)) %>%
+  # build grouping by combination of variables
+  dplyr::group_by(SampleDateTime, Facility, FL) %>%
+  # add row number which works per group due to prior grouping
+  dplyr::mutate(duplicateID = dplyr::row_number()) %>%
+  # ungroup to prevent unexpected behaviour down stream
+  dplyr::ungroup()
+```
+
+## QA/QC process
+
+Genetic and salvage datasets were combined and I checked to see if there were any individuals in the genetic datasheet that remain unpaired with the salvage database. There were NO individuals that remain unpaired with the salvage database (i.e., everything in the genetic dataset matched).
+
+```{r qaqc}
+
+##################### Combine the salvage and genetic data sets
+combined_data<-left_join(salvage_data_adjusted,genetic_data_expanded)
+
+# All data are matched up to the salvage database
+unpaired_genetic_data<-full_join(salvage_data_adjusted,genetic_data_expanded) %>% filter(is.na(Salvage))
+count(unpaired_genetic_data)/count(genetic_data)
+
+
+  
+```
+
+### Loss calculation errors
+
+Loss numbers were calculated in the genetic datasheet; however, I wanted to ensure that the loss numbers between my "paired" dataset matched with what is in the genetic datasheet.
+
+```{r loss qaqc}
+
+#Double check that numbers are correct for matched data
+paired_genetic_data <- combined_data %>% filter(!is.na(ArchiveID)) %>%
+  #specify 2 decimals for loss
+  mutate(Loss=as.numeric(format(round(Loss, 2)))) %>%
+  mutate(Loss_KevinReece=as.numeric(format(round(Loss_KevinReece, 2)))) %>%
+  #Check that loss calculations match up for both genetic and salvage data sets
+  mutate(QAQC_Loss_Difference=abs(Loss-Loss_KevinReece))
+```
+
+Even if I did not count differences in loss calculations due to rounding errors (difference less than 0.05), there were 
+`r round(count(paired_genetic_data %>% filter(abs(QAQC_Loss_Difference)<0.05))/count(paired_genetic_data)*100,digits=4)` % of the data where loss numbers did not match. Summing all the differences in these data rows, in total, there was a loss discrepancy of `r sum(paired_genetic_data$QAQC_Loss_Difference)` between the two datasets.
+
+```{r loss diff}
+
+#Percent correct
+count(paired_genetic_data %>% filter(abs(QAQC_Loss_Difference)<0.05))/count(paired_genetic_data)*100
+
+#Total difference in loss calculation
+sum(paired_genetic_data$QAQC_Loss_Difference)
+```
+
+## Final, cleaned dataset
+
+Given the discrepancy in loss calculations between the two datasets, here I create a finalized dataset which contain all the relevant information regarding these genetically confirmed winter-run Chinook Salmon collected at the salvage facilities. My recommendation would be to use the loss that was calculated in the salvage database (column: Loss_Salvage). "QAQC_Loss_Difference" column was calculated as the absolute value of difference in loss between the salvage dataset and genetic dataset. The final dataset is titled **"Paired_Genetic_Data_Loss_Comparison_2023-01-17.csv"**.
+
+```{r final output}
+
+#Remove certain columns and rename some to make the dataset easier to understand and use
+paired_genetic_data_final<-paired_genetic_data %>% select(-Date,-Month,-MonthDay,-Time,-Count,-duplicateID) %>%
+  rename(Loss_GeneticData=Loss_KevinReece,Loss_SalvageData=Loss,LAD_GeneticData=LAD_KevinReece)
+
+#Print out csv
+write.csv(paired_genetic_data,file=file.path("output/Paired_Genetic_Data_Loss_Comparison_2023-01-17.csv"),row.names = F)
+
+```
+
