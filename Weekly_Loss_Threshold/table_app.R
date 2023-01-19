@@ -38,7 +38,7 @@ str(test)
 ui <- fluidPage(
 
     # Application title
-    title="Exploration of winter-run Chinook Salmon weekly loss threshold for the salvage facilities",
+    titlePanel("Winter-run Chinook Salmon weekly loss threshold"),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
@@ -49,15 +49,13 @@ ui <- fluidPage(
                         selected=2019,multiple=FALSE),
             numericInput("percent_jpe", "% JPE for annual threshold:", 0.54, min = 0.01, max = 100)),
     # Show a plot of the generated distribution
-    plotOutput("Plot")),
-    fluidRow(
-        column(4, tableOutput("tableSum"))))
+    mainPanel(tabsetPanel(tabPanel("Plot",plotOutput("Plot")),tabPanel("Table",tableOutput("tableSum"))))))
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
     #Pull together data for table
-    sum_data <- reactive({ dist_data %>% left_join(genetic_data_sum %>% filter(Year==input$year_input)) %>% 
-        mutate(Loss=replace_na(Loss,0),Year=input$year_input) %>%
+    sum_data <- reactive({ dist_data %>% left_join(genetic_data_sum %>% filter(Year==as.numeric(input$year_input))) %>% 
+        mutate(Loss=replace_na(Loss,0),Year=as.numeric(input$year_input)) %>%
         left_join(jpe_data) %>% mutate(accumulated_loss=cumsum(Loss),
                                        yellow_vulnerability=JuvenileProductionEstimate*1.17*0.5*Present_inDelta,
                                        yellow_cumulative=JuvenileProductionEstimate*1.17*0.5*EnterDelta,
