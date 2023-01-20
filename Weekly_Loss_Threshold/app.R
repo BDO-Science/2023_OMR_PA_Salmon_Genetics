@@ -12,15 +12,16 @@ library(tidyverse)
 library(DT)
 library(readxl)
 library(lubridate)
+library(rsconnect)
 
-genetic_data <-read.csv("../output/Paired_Genetic_Data_Loss_Comparison_2023-01-17.csv")
+genetic_data <-read.csv("Paired_Genetic_Data_Loss_Comparison_2023-01-17.csv")
 
 genetic_data_sum <- genetic_data %>% mutate(Week=week(SampleDate),Year=year(SampleDate)) %>% filter(Week<=20) %>%
     group_by(Year,Week) %>% summarise(Loss=sum(Loss_SalvageData))
     
-dist_data <- read.csv(file = file.path("../data_input/Dummy_dist.csv"))
+dist_data <- read.csv(file = file.path("Dummy_dist.csv"))
 
-jpe_data <- read.csv(file = file.path("../data_input/Winter-run_JPE.csv")) %>% rename(Year=WY)
+jpe_data <- read.csv(file = file.path("Winter-run_JPE.csv")) %>% rename(Year=WY)
 
 year_options <- unique(year(genetic_data$SampleDate))
 
