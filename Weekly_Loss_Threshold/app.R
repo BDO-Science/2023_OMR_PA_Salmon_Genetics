@@ -31,7 +31,6 @@ test <- dist_data %>% left_join(genetic_data_sum %>% filter(Year==2019)) %>% mut
                                    yellow_cumulative=JuvenileProductionEstimate*1.17*0.5*EnterDelta,
                                    yellow_light_vul=as.factor(ifelse(Loss>yellow_vulnerability,"Yes","No")))
 
-str(test)
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
@@ -60,7 +59,11 @@ server <- function(input, output, session) {
                                        yellow_vulnerability=JuvenileProductionEstimate*(as.numeric(input$percent_jpe)/100)*0.5*Present_inDelta,
                                        yellow_cumulative=JuvenileProductionEstimate*(as.numeric(input$percent_jpe)/100)*0.5*EnterDelta,
                                        yellow_light_vul=as.factor(ifelse(Loss>yellow_vulnerability,"Yes","No")),
-                                       yellow_light_cum=as.factor(ifelse(Loss>yellow_cumulative,"Yes","No"))) })
+                                       yellow_light_cum=as.factor(ifelse(Loss>yellow_cumulative,"Yes","No")),
+                                       red_vulnerability=JuvenileProductionEstimate*(as.numeric(input$percent_jpe)/100)*Present_inDelta,
+                                       red_cumulative=JuvenileProductionEstimate*(as.numeric(input$percent_jpe)/100)*0.5*EnterDelta,
+                                       red_light_vul=as.factor(ifelse(Loss>red_vulnerability,"Yes","No")),
+                                       red_light_cum=as.factor(ifelse(Loss>red_cumulative,"Yes","No")),) })
     
     output$Plot <- renderPlot({
         print(ggplot(data=sum_data()) + theme_dark() +
@@ -69,7 +72,9 @@ server <- function(input, output, session) {
             geom_line(aes(x=Week,y=accumulated_loss),color="white") +
             geom_line(aes(x=Week,y=yellow_cumulative),color="yellow",linetype = "solid") +
             geom_line(aes(x=Week,y=yellow_vulnerability),color="yellow",linetype = "dashed") +
-            scale_fill_manual(name="yellow_light_vul",values=c("black","red"))
+            scale_fill_manual(name="yellow_light_vul",values=c("black","red"))+
+            theme(axis.text.x = element_text(size=12,color="black"),axis.text.y = element_text(size=12,color="black"),
+                  axis.title.x = element_text(size=14),axis.title.y = element_text(size=14))
     })
     
     output$tableSum <- renderTable(sum_data())

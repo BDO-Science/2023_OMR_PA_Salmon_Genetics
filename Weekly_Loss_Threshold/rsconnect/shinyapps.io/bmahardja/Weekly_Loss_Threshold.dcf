@@ -1,0 +1,13 @@
+name: Weekly_Loss_Threshold
+title: Weekly_Loss_Threshold
+username:
+account: bmahardja
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 8080620
+bundleId: 6756027
+url: https://bmahardja.shinyapps.io/Weekly_Loss_Threshold/
+when: 1674234315.14912
+lastSyncTime: 1674234315.14913
+asMultiple: FALSE
+asStatic: FALSE
