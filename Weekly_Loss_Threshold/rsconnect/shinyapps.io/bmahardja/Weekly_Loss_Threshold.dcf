@@ -5,9 +5,9 @@ account: bmahardja
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 8080620
-bundleId: 6756027
+bundleId: 6756106
 url: https://bmahardja.shinyapps.io/Weekly_Loss_Threshold/
-when: 1674234315.14912
-lastSyncTime: 1674234315.14913
+when: 1674235550.13581
+lastSyncTime: 1674235550.13583
 asMultiple: FALSE
 asStatic: FALSE
