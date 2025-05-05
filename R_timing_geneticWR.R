@@ -35,5 +35,8 @@ september_first_2022 <- as.Date(paste("2022", "09", "01", sep = "-"))
 # Convert the days back to month and day
 data_WR_sum_new$new_date <- september_first_2022 + data_WR_sum_new$date
 
-# Get the month and day
-month_day <- format(new_date, "%B %d")
+data_WR_sum_new<- data_WR_sum_new %>%
+  arrange(date)
+
+# Write csv
+write.csv(data_WR_sum_new,file.path("output","date_distribution_geneticWR_salvage.csv"),row.names=F)
