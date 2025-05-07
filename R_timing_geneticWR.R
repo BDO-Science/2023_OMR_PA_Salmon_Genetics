@@ -40,3 +40,10 @@ data_WR_sum_new<- data_WR_sum_new %>%
 
 # Write csv
 write.csv(data_WR_sum_new,file.path("output","date_distribution_geneticWR_salvage.csv"),row.names=F)
+
+# Do year by year according to Josh
+data_WR_year <- data_WR %>% group_by(september_year) %>% summarise(min_date=min(SampleDate),median_date=median(SampleDate),max_date=max(SampleDate)) %>%
+  mutate(water_year=september_year+1) %>% select(-september_year)
+
+# Write csv
+write.csv(data_WR_year,file.path("output","date_distribution_geneticWR_salvage_by_year.csv"),row.names=F)
